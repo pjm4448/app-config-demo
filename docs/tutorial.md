@@ -373,6 +373,96 @@ az appconfig kv set-keyvault `
     --yes
 ```
 
+### Add environment labels
+
+Keep the unlabeled values above as the baseline configuration. Then create a complete
+set of values for each environment label. Labels are case-sensitive.
+
+```powershell
+# This step can run in a new PowerShell session, so retrieve the existing secret URI.
+$secretUri = az keyvault secret show `
+    --vault-name $keyVaultName `
+    --name "DemoApiKey" `
+    --query id `
+    --output tsv
+
+if ([string]::IsNullOrWhiteSpace($secretUri)) {
+    throw "The Key Vault secret URI could not be retrieved."
+}
+
+function Set-DemoAppConfigurationLabel {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Label,
+
+        [Parameter(Mandatory)]
+        [string]$DatabaseServer,
+
+        [Parameter(Mandatory)]
+        [string]$DatabaseName
+    )
+
+    az appconfig kv set `
+        --name $appConfigName `
+        --auth-mode login `
+        --key "DemoApp:ApplicationName" `
+        --label $Label `
+        --value "App Configuration Demo" `
+        --yes
+
+    az appconfig kv set `
+        --name $appConfigName `
+        --auth-mode login `
+        --key "DemoApp:Environment" `
+        --label $Label `
+        --value $Label `
+        --yes
+
+    az appconfig kv set `
+        --name $appConfigName `
+        --auth-mode login `
+        --key "DemoApp:Database:Server" `
+        --label $Label `
+        --value $DatabaseServer `
+        --yes
+
+    az appconfig kv set `
+        --name $appConfigName `
+        --auth-mode login `
+        --key "DemoApp:Database:Name" `
+        --label $Label `
+        --value $DatabaseName `
+        --yes
+
+    az appconfig kv set-keyvault `
+        --name $appConfigName `
+        --auth-mode login `
+        --key "DemoApp:ApiKey" `
+        --label $Label `
+        --secret-identifier $secretUri `
+        --yes
+}
+
+Set-DemoAppConfigurationLabel `
+    -Label "Development" `
+    -DatabaseServer "sql-demo-dev.database.windows.net" `
+    -DatabaseName "DemoDbDevelopment"
+
+Set-DemoAppConfigurationLabel `
+    -Label "Test" `
+    -DatabaseServer "sql-demo-test.database.windows.net" `
+    -DatabaseName "DemoDbTest"
+
+Set-DemoAppConfigurationLabel `
+    -Label "Production" `
+    -DatabaseServer "sql-demo-prod.database.windows.net" `
+    -DatabaseName "DemoDbProduction"
+```
+
+Each label has its own version of every `DemoApp` key. The same Key Vault secret is
+referenced for all three labels solely to keep this exercise self-contained; use
+environment-specific secrets for a real deployment.
+
 > [!CAUTION]
 > The secret is hard-coded only to keep the tutorial self-contained. Supply secrets securely at runtime in real automation.
 
@@ -389,7 +479,17 @@ az appconfig kv list `
     --output table
 ```
 
-Expected keys include:
+Verify the values created under the `Production` label:
+
+```powershell
+az appconfig kv list `
+    --name $appConfigName `
+    --auth-mode login `
+    --label "Production" `
+    --output table
+```
+
+Expected keys for each label include:
 
 ```text
 DemoApp:ApiKey
