@@ -2,6 +2,8 @@
 
 ## Overview
 
+Azure App Configuration provides a central place to manage application settings across environments, while Azure Key Vault keeps secrets outside the configuration store. Together, they support safer secret handling, feature flags, and dynamic configuration updates without requiring an application redeployment.
+
 This tutorial demonstrates how to:
 
 1. Create an **Azure App Configuration** store in the Azure portal.
