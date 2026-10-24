@@ -552,15 +552,22 @@ dotnet restore
 
 ---
 
-## 14. Set the App Configuration endpoint
+## 14. Set the App Configuration endpoint and label
 
-Set an environment variable in the PowerShell session from which the application will run:
+Set environment variables in the PowerShell session from which the application will run:
 
 ```powershell
 $env:AppConfigurationEndpoint = "https://appcs-demo-pjm.azconfig.io"
+$env:AppConfigurationLabel = "Development"
 ```
 
-Replace the value with the actual App Configuration endpoint.
+Replace the endpoint with the actual App Configuration endpoint. The label is
+case-sensitive and must match one created in Step 10. Clear the label to use only
+the unlabeled baseline values:
+
+```powershell
+Remove-Item Env:AppConfigurationLabel -ErrorAction SilentlyContinue
+```
 
 ---
 
@@ -595,9 +602,12 @@ Replace `Program.cs` with:
 ```csharp
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 
 string? endpoint = Environment.GetEnvironmentVariable(
     "AppConfigurationEndpoint");
+string? label = Environment.GetEnvironmentVariable(
+    "AppConfigurationLabel");
 
 if (string.IsNullOrWhiteSpace(endpoint))
 {
@@ -614,10 +624,17 @@ var configuration = new ConfigurationBuilder()
     {
         options
             .Connect(new Uri(endpoint), credential)
-            .ConfigureKeyVault(keyVaultOptions =>
-            {
-                keyVaultOptions.SetCredential(credential);
-            });
+            .Select("DemoApp:*", LabelFilter.Null);
+
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            options.Select("DemoApp:*", label);
+        }
+
+        options.ConfigureKeyVault(keyVaultOptions =>
+        {
+            keyVaultOptions.SetCredential(credential);
+        });
     })
     .Build();
 
@@ -635,7 +652,11 @@ Console.WriteLine(
     $"API Key          : {configuration["DemoApp:ApiKey"]}");
 ```
 
-The same `DefaultAzureCredential` is supplied to App Configuration and to the Key Vault reference resolver.
+The first selector loads unlabeled `DemoApp` values as the baseline. When
+`AppConfigurationLabel` is defined, the second selector loads that label afterward,
+so its values override matching baseline keys. Baseline values remain available for
+keys that do not exist under the selected label. The same `DefaultAzureCredential`
+is supplied to App Configuration and to the Key Vault reference resolver.
 
 ---
 
@@ -654,9 +675,19 @@ Azure App Configuration Demo
 ----------------------------
 Application Name : App Configuration Demo
 Environment      : Development
-Database Server  : sql-demo.database.windows.net
-Database Name    : DemoDb
+Database Server  : sql-demo-dev.database.windows.net
+Database Name    : DemoDbDevelopment
 API Key          : SuperSecretValue123!
+```
+
+Switch labels without changing the application:
+
+```powershell
+$env:AppConfigurationLabel = "Test"
+dotnet run
+
+$env:AppConfigurationLabel = "Production"
+dotnet run
 ```
 
 > [!WARNING]
@@ -875,6 +906,19 @@ $env:AppConfigurationEndpoint = "https://<store-name>.azconfig.io"
 dotnet run
 ```
 
+### The application loads baseline values instead of labeled values
+
+Confirm that the label is defined in the same PowerShell session and matches the
+App Configuration label exactly; labels are case-sensitive:
+
+```powershell
+$env:AppConfigurationLabel = "Development"
+dotnet run
+```
+
+Also verify that the selected label contains the expected `DemoApp:*` keys by using
+the labeled verification command in Step 10.
+
 ### Wrong tenant or subscription
 
 Inspect the current Azure CLI context:
@@ -908,7 +952,7 @@ Review the contents of the resource group before deleting it.
 ## Suggested follow-on exercises
 
 1. Add `Development`, `Test`, and `Production` labels.
-2. Select configuration by label in the C# application.
+2. Switch `AppConfigurationLabel` between `Development`, `Test`, and `Production`.
 3. Add dynamic configuration refresh.
 4. Add feature flags.
 5. Replace the console application with Azure App Service, Azure Functions, or Azure Container Apps.

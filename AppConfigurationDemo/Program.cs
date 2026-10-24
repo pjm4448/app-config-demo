@@ -1,8 +1,11 @@
 ﻿using Azure.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 
 string? endpoint = Environment.GetEnvironmentVariable(
     "AppConfigurationEndpoint");
+string? label = Environment.GetEnvironmentVariable(
+    "AppConfigurationLabel");
 
 if (string.IsNullOrWhiteSpace(endpoint))
 {
@@ -19,10 +22,17 @@ var configuration = new ConfigurationBuilder()
     {
         options
             .Connect(new Uri(endpoint), credential)
-            .ConfigureKeyVault(keyVaultOptions =>
-            {
-                keyVaultOptions.SetCredential(credential);
-            });
+            .Select("DemoApp:*", LabelFilter.Null);
+
+        if (!string.IsNullOrWhiteSpace(label))
+        {
+            options.Select("DemoApp:*", label);
+        }
+
+        options.ConfigureKeyVault(keyVaultOptions =>
+        {
+            keyVaultOptions.SetCredential(credential);
+        });
     })
     .Build();
 

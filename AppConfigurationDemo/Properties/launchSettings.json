@@ -5,6 +5,7 @@
       "commandName": "Project",
       "environmentVariables": {
         "AppConfigurationEndpoint": "https://appcs-demo-pjm.azconfig.io",
+        "AppConfigurationLabel": "Development",
         "AZURE_TOKEN_CREDENTIALS": "AzureCliCredential"
       }
     }
