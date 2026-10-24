@@ -13,6 +13,9 @@ This tutorial demonstrates how to:
 7. Distinguish between **developer/setup permissions** and **application runtime permissions**.
 8. Troubleshoot RBAC, PowerShell variable, corporate VPN, proxy, and certificate-trust issues.
 
+> [!NOTE]
+> Several Azure resource names in this tutorial require a unique suffix. The examples use `pjm` as the author's naming suffix. Replace every occurrence of `pjm` in this tutorial with a unique suffix of your own before running the commands or creating resources.
+
 > [!IMPORTANT]
 > Azure App Configuration stores a Key Vault reference containing the secret URI. The application recognises that reference and retrieves the secret from Key Vault. The application identity therefore needs permission to read both App Configuration and Key Vault.
 
