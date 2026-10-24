@@ -1,4 +1,4 @@
-# Tutorial: Azure App Configuration, Azure Key Vault, and a C# Console Application
+# Tutorial: Azure App Configuration with Key Vault References in a C# Console Application
 
 ## Overview
 
