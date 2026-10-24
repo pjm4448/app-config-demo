@@ -352,6 +352,13 @@ az appconfig kv set `
     --value "DemoDb" `
     --yes
 
+# Create the feature flag in the baseline configuration.
+az appconfig feature set `
+    --name $appConfigName `
+    --auth-mode login `
+    --feature "NewExperience" `
+    --yes
+
 # Create or update the Key Vault secret and capture its identifier.
 $secretUri = az keyvault secret set `
     --vault-name $keyVaultName `
@@ -457,6 +464,14 @@ Set-DemoAppConfigurationLabel `
     -Label "Production" `
     -DatabaseServer "sql-demo-prod.database.windows.net" `
     -DatabaseName "DemoDbProduction"
+
+# Enable the feature only for the Development label.
+az appconfig feature set `
+    --name $appConfigName `
+    --auth-mode login `
+    --feature "NewExperience" `
+    --label "Development" `
+    --yes
 ```
 
 Each label has its own version of every `DemoApp` key. The same Key Vault secret is
@@ -501,6 +516,25 @@ DemoApp:Environment
 
 The Key Vault reference is returned as a JSON object containing a secret URI. The actual secret value is not stored in App Configuration.
 
+### Create the feature flag in the Azure portal
+
+Feature flags have their own portal blade; they do not appear as ordinary entries
+under **Configuration explorer**.
+
+1. Open the App Configuration resource.
+2. Under **Feature management**, select **Feature manager**.
+3. Select **+ Create** or **Add**.
+4. Enter `NewExperience` as the feature flag name.
+5. Set the label to `Development`.
+6. Set the feature flag to **Enabled**.
+7. Select **Apply** or **Create**.
+
+The application reads the flag by the name `NewExperience`. Feature flag names must
+not contain a colon, so use `NewExperience` rather than `DemoApp:NewExperience`.
+To create the same flag from PowerShell instead, use the `az appconfig feature set`
+command shown above. If you create the flag only in the portal, the Azure CLI step
+is not required.
+
 ---
 
 ## 11. Understand the local runtime permissions
@@ -542,6 +576,12 @@ Install Azure Identity:
 
 ```powershell
 dotnet add package Azure.Identity
+```
+
+Install feature-management support:
+
+```powershell
+dotnet add package Microsoft.FeatureManagement
 ```
 
 Restore packages:
@@ -678,6 +718,7 @@ Environment      : Development
 Database Server  : sql-demo-dev.database.windows.net
 Database Name    : DemoDbDevelopment
 API Key          : SuperSecretValue123!
+New Experience   : True
 ```
 
 Switch labels without changing the application:
@@ -1016,6 +1057,65 @@ eligible refresh attempts.
 set, consider registering one sentinel key and update it only after all related
 configuration changes have been committed, so the application reloads a consistent
 group of settings.
+
+---
+
+## Follow-on exercise 4: Add feature flags
+
+Azure App Configuration stores feature flags separately from ordinary key-values.
+The `UseFeatureFlags` provider maps the flag named `NewExperience` to the
+standard .NET feature-management API. The application loads the unlabeled flag as a
+baseline and then loads the selected label so a label can override the baseline.
+
+Add this inside the `AddAzureAppConfiguration` options callback, after the ordinary
+`Select` calls:
+
+```csharp
+options.UseFeatureFlags(featureFlagOptions =>
+{
+    featureFlagOptions.Select("*", LabelFilter.Null);
+
+    if (!string.IsNullOrWhiteSpace(label))
+    {
+        featureFlagOptions.Select("*", label);
+    }
+
+    featureFlagOptions.SetRefreshInterval(TimeSpan.FromSeconds(5));
+});
+```
+
+Register feature management and resolve an `IFeatureManager`:
+
+```csharp
+ServiceCollection serviceCollection = new();
+serviceCollection.AddFeatureManagement();
+using ServiceProvider services = serviceCollection.BuildServiceProvider();
+
+IFeatureManager featureManager = services.GetRequiredService<IFeatureManager>();
+```
+
+Read the flag wherever the application decides whether to enable a behavior:
+
+```csharp
+bool newExperienceEnabled =
+    await featureManager.IsEnabledAsync("NewExperience");
+
+Console.WriteLine($"New Experience   : {newExperienceEnabled}");
+```
+
+Because the existing refresh loop calls `TryRefreshAsync`, changing the flag in
+App Configuration is reflected in the next printed configuration block without
+restarting the application. To test it, toggle the `NewExperience` flag
+under the `Development` label in Configuration explorer or with:
+
+```powershell
+az appconfig feature set `
+    --name $appConfigName `
+    --auth-mode login `
+    --feature "NewExperience" `
+    --label "Development" `
+    --yes
+```
 
 ---
 

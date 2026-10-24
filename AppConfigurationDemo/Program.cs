@@ -1,6 +1,8 @@
 ﻿using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.FeatureManagement;
 
 string? endpoint = Environment.GetEnvironmentVariable(
     "AppConfigurationEndpoint");
@@ -30,6 +32,18 @@ var configuration = new ConfigurationBuilder()
             options.Select("DemoApp:*", label);
         }
 
+        options.UseFeatureFlags(featureFlagOptions =>
+        {
+            featureFlagOptions.Select("*", LabelFilter.Null);
+
+            if (!string.IsNullOrWhiteSpace(label))
+            {
+                featureFlagOptions.Select("*", label);
+            }
+
+            featureFlagOptions.SetRefreshInterval(TimeSpan.FromSeconds(5));
+        });
+
         options.ConfigureRefresh(refreshOptions =>
         {
             refreshOptions
@@ -52,6 +66,13 @@ if (refresher is null)
     return;
 }
 
+ServiceCollection serviceCollection = new();
+serviceCollection.AddSingleton<IConfiguration>(configuration);
+serviceCollection.AddFeatureManagement();
+using ServiceProvider services = serviceCollection.BuildServiceProvider();
+
+IFeatureManager featureManager = services.GetRequiredService<IFeatureManager>();
+
 using var cancellationSource = new CancellationTokenSource();
 Console.CancelKeyPress += (_, eventArgs) =>
 {
@@ -59,7 +80,7 @@ Console.CancelKeyPress += (_, eventArgs) =>
     cancellationSource.Cancel();
 };
 
-PrintConfiguration(configuration);
+await PrintConfiguration(configuration, featureManager);
 Console.WriteLine("Watching for changes. Press Ctrl+C to stop.");
 
 try
@@ -74,7 +95,7 @@ try
         {
             Console.WriteLine();
             Console.WriteLine($"Configuration refreshed at {DateTimeOffset.Now:T}.");
-            PrintConfiguration(configuration);
+            await PrintConfiguration(configuration, featureManager);
         }
     }
 }
@@ -83,7 +104,9 @@ catch (OperationCanceledException)
     // Ctrl+C requested a graceful shutdown.
 }
 
-static void PrintConfiguration(IConfiguration configuration)
+static async Task PrintConfiguration(
+    IConfiguration configuration,
+    IFeatureManager featureManager)
 {
     DatabaseSettings databaseSettings =
         configuration
@@ -103,4 +126,6 @@ static void PrintConfiguration(IConfiguration configuration)
         $"Database Name    : {databaseSettings.Name}");
     Console.WriteLine(
         $"API Key          : {configuration["DemoApp:ApiKey"]}");
+    Console.WriteLine(
+        $"New Experience   : {await featureManager.IsEnabledAsync("NewExperience")}");
 }
