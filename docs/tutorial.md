@@ -953,12 +953,69 @@ Review the contents of the resource group before deleting it.
 
 1. Add `Development`, `Test`, and `Production` labels.
 2. Switch `AppConfigurationLabel` between `Development`, `Test`, and `Production`.
-3. Add dynamic configuration refresh.
+3. Add dynamic configuration refresh (implemented below).
 4. Add feature flags.
 5. Replace the console application with Azure App Service, Azure Functions, or Azure Container Apps.
 6. Enable managed identity on the hosted workload.
 7. Provision the solution using Bicep or Terraform.
 8. Add private endpoints and restrict public network access.
+
+---
+
+## Follow-on exercise 3: Add dynamic configuration refresh
+
+The application can watch its selected `DemoApp:*` key-values and reload them without
+restarting. Register the selected keys after the `Select` calls in
+`AddAzureAppConfiguration`:
+
+```csharp
+options.ConfigureRefresh(refreshOptions =>
+{
+    refreshOptions
+        .RegisterAll()
+        .SetRefreshInterval(TimeSpan.FromSeconds(5));
+});
+
+refresher = options.GetRefresher();
+```
+
+The completed application retains that refresher and calls `TryRefreshAsync` every
+five seconds. It also binds `DatabaseSettings` again after a refresh; an object bound
+with `Get<T>()` is a snapshot and does not update itself when configuration changes.
+Press `Ctrl+C` to stop the loop cleanly.
+
+To verify refresh, start the application in one PowerShell session:
+
+```powershell
+$env:AppConfigurationEndpoint = "https://appcs-demo-pjm.azconfig.io"
+$env:AppConfigurationLabel = "Development"
+dotnet run
+```
+
+While it remains running, update a value under the same label in another PowerShell
+session:
+
+```powershell
+$appConfigName = "appcs-demo-pjm"
+
+az appconfig kv set `
+    --name $appConfigName `
+    --auth-mode login `
+    --key "DemoApp:Database:Name" `
+    --label "Development" `
+    --value "DemoDbDevelopmentRefreshed" `
+    --yes
+```
+
+Within roughly ten seconds, the running application should print a refresh message
+and the new database name. The provider enforces the five-second refresh interval;
+calling `TryRefreshAsync` does not continuously contact App Configuration between
+eligible refresh attempts.
+
+`RegisterAll` is convenient for this small tutorial. For a larger production key
+set, consider registering one sentinel key and update it only after all related
+configuration changes have been committed, so the application reloads a consistent
+group of settings.
 
 ---
 
@@ -969,6 +1026,7 @@ Review the contents of the resource group before deleting it.
 - [Azure App Configuration Microsoft Entra authorisation](https://learn.microsoft.com/en-us/azure/azure-app-configuration/rest-api-authorization-azure-ad)
 - [Use Key Vault references in an ASP.NET Core app](https://learn.microsoft.com/en-us/azure/azure-app-configuration/use-key-vault-references-dotnet-core)
 - [.NET configuration provider for Azure App Configuration](https://learn.microsoft.com/en-us/azure/azure-app-configuration/reference-dotnet-provider)
+- [Use dynamic configuration in a .NET app](https://learn.microsoft.com/en-us/azure/azure-app-configuration/enable-dynamic-configuration-dotnet-core)
 - [Azure App Configuration key-value CLI commands](https://learn.microsoft.com/en-us/cli/azure/appconfig/kv)
 - [Azure Key Vault RBAC guide](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide)
 - [Azure Key Vault built-in security roles](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles/security)
