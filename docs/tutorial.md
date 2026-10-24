@@ -15,7 +15,7 @@ This tutorial demonstrates how to:
 9. Troubleshoot RBAC, PowerShell variable, corporate VPN, proxy, and certificate-trust issues.
 
 > [!NOTE]
-> Several Azure resource names in this tutorial require a unique suffix. The examples use `pjm` as the author's naming suffix. Replace every occurrence of `pjm` in this tutorial with a unique suffix of your own before running the commands or creating resources.
+> Several Azure resource names in this tutorial require a unique suffix. Search for every occurrence of `<unique-suffix>` and replace it with a unique value of your own before running the commands or creating resources.
 
 > [!IMPORTANT]
 > Azure App Configuration stores a Key Vault reference containing the secret URI. The application recognises that reference and retrieves the secret from Key Vault. The identity loading the configuration needs permission to read App Configuration, and the identity resolving the reference needs permission to read the corresponding secret in Key Vault.
@@ -133,7 +133,7 @@ If connecting to the approved corporate VPN resolves the issue, keep the VPN con
 8. Record its endpoint, for example:
 
 ```text
-https://appcs-demo-pjm.azconfig.io
+https://appcs-demo-<unique-suffix>.azconfig.io
 ```
 
 ---
@@ -314,8 +314,8 @@ If required by your organisation, connect to the corporate VPN before running th
 Define the resource names in the current PowerShell session:
 
 ```powershell
-$appConfigName = "appcs-demo-pjm"
-$keyVaultName  = "kv-appconfig-demo-pjm"
+$appConfigName = "appcs-demo-<unique-suffix>"
+$keyVaultName  = "kv-appconfig-demo-<unique-suffix>"
 ```
 
 Confirm they are populated:
@@ -492,7 +492,7 @@ environment-specific secrets for a real deployment.
 Run the verification command in the same PowerShell session in which `$appConfigName` was defined:
 
 ```powershell
-$appConfigName = "appcs-demo-pjm"
+$appConfigName = "appcs-demo-<unique-suffix>"
 
 az appconfig kv list `
     --name $appConfigName `
@@ -603,7 +603,7 @@ dotnet restore
 Set environment variables in the PowerShell session from which the application will run:
 
 ```powershell
-$env:AppConfigurationEndpoint = "https://appcs-demo-pjm.azconfig.io"
+$env:AppConfigurationEndpoint = "https://appcs-demo-<unique-suffix>.azconfig.io"
 $env:AppConfigurationLabel = "Development"
 ```
 
@@ -859,7 +859,7 @@ The PowerShell variable supplied to `--name` is empty or was defined in another 
 Define and verify it before running the command:
 
 ```powershell
-$appConfigName = "appcs-demo-pjm"
+$appConfigName = "appcs-demo-<unique-suffix>"
 Write-Host $appConfigName
 ```
 
@@ -929,8 +929,8 @@ Test HTTPS without sending a bearer token manually:
 ```powershell
 az rest `
     --method get `
-    --url "https://appcs-demo-pjm.azconfig.io/kv?api-version=1.0" `
-    --resource "https://appcs-demo-pjm.azconfig.io"
+    --url "https://appcs-demo-<unique-suffix>.azconfig.io/kv?api-version=1.0" `
+    --resource "https://appcs-demo-<unique-suffix>.azconfig.io"
 ```
 
 > [!WARNING]
@@ -1034,7 +1034,7 @@ Press `Ctrl+C` to stop the loop cleanly.
 To verify refresh, start the application in one PowerShell session:
 
 ```powershell
-$env:AppConfigurationEndpoint = "https://appcs-demo-pjm.azconfig.io"
+$env:AppConfigurationEndpoint = "https://appcs-demo-<unique-suffix>.azconfig.io"
 $env:AppConfigurationLabel = "Development"
 dotnet run
 ```
@@ -1043,7 +1043,7 @@ While it remains running, update a value under the same label in another PowerSh
 session:
 
 ```powershell
-$appConfigName = "appcs-demo-pjm"
+$appConfigName = "appcs-demo-<unique-suffix>"
 
 az appconfig kv set `
     --name $appConfigName `
