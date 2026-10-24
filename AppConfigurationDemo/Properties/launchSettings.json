@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "AppConfigurationDemo": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "AppConfigurationEndpoint": "https://appcs-demo-pjm.azconfig.io",
+        "AZURE_TOKEN_CREDENTIALS": "AzureCliCredential"
+      }
+    }
+  }
+}

@@ -26,6 +26,12 @@ var configuration = new ConfigurationBuilder()
     })
     .Build();
 
+DatabaseSettings databaseSettings =
+    configuration
+        .GetSection("DemoApp:Database")
+        .Get<DatabaseSettings>()
+    ?? new DatabaseSettings();
+
 Console.WriteLine("Azure App Configuration Demo");
 Console.WriteLine("----------------------------");
 Console.WriteLine(
@@ -33,8 +39,8 @@ Console.WriteLine(
 Console.WriteLine(
     $"Environment      : {configuration["DemoApp:Environment"]}");
 Console.WriteLine(
-    $"Database Server  : {configuration["DemoApp:Database:Server"]}");
+    $"Database Server  : {databaseSettings.Server}");
 Console.WriteLine(
-    $"Database Name    : {configuration["DemoApp:Database:Name"]}");
+    $"Database Name    : {databaseSettings.Name}");
 Console.WriteLine(
     $"API Key          : {configuration["DemoApp:ApiKey"]}");
