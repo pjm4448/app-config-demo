@@ -10,14 +10,15 @@ This tutorial demonstrates how to:
 4. Add ordinary values, hierarchical values, and a Key Vault reference to App Configuration.
 5. Automate and verify the configuration with PowerShell and Azure CLI.
 6. Create a C# console application that retrieves the configuration and resolves the Key Vault reference.
-7. Distinguish between **developer/setup permissions** and **application runtime permissions**.
-8. Troubleshoot RBAC, PowerShell variable, corporate VPN, proxy, and certificate-trust issues.
+7. Use labels, feature flags, dynamic refresh, and strongly typed configuration binding.
+8. Distinguish between **developer/setup permissions** and **application runtime permissions**.
+9. Troubleshoot RBAC, PowerShell variable, corporate VPN, proxy, and certificate-trust issues.
 
 > [!NOTE]
 > Several Azure resource names in this tutorial require a unique suffix. The examples use `pjm` as the author's naming suffix. Replace every occurrence of `pjm` in this tutorial with a unique suffix of your own before running the commands or creating resources.
 
 > [!IMPORTANT]
-> Azure App Configuration stores a Key Vault reference containing the secret URI. The application recognises that reference and retrieves the secret from Key Vault. The application identity therefore needs permission to read both App Configuration and Key Vault.
+> Azure App Configuration stores a Key Vault reference containing the secret URI. The application recognises that reference and retrieves the secret from Key Vault. The identity loading the configuration needs permission to read App Configuration, and the identity resolving the reference needs permission to read the corresponding secret in Key Vault.
 
 ---
 
@@ -35,12 +36,14 @@ Azure Resource Group
 |       `-- Key Vault reference
 |           `-- Azure Key Vault
 |               `-- DemoApiKey = secret value
-|
-`-- C# Console Application
-    |-- DefaultAzureCredential
-    |-- Azure App Configuration provider
-    `-- IConfiguration
+
+Local C# Console Application
+|-- DefaultAzureCredential
+|-- Azure App Configuration provider
+`-- IConfiguration
 ```
+
+The C# console application runs locally; it is not an Azure resource in the resource group. It connects to App Configuration and Key Vault using `DefaultAzureCredential`.
 
 The examples use colon-separated key names such as `DemoApp:Database:Server`. .NET interprets these as hierarchical configuration keys.
 
@@ -260,7 +263,7 @@ Key:   DemoApp:Database:Name
 Value: DemoDb
 ```
 
-The logical .NET structure is:
+The .NET configuration view is:
 
 ```text
 DemoApp
